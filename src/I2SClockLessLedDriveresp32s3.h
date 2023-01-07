@@ -386,7 +386,7 @@ void setBrightness(int brightness)
                  //led_output2+=__OFFSET/2;
                 for (int i = 0; i < NUM_LED_PER_STRIP * _nb_components * 8 ; i++)
                     {
-                        led_output[3 * i+1] = 0xFFFF;
+                        led_output[3 * i+1] = 0xFFFF; //the +1 because it's like the first value doesnt get pushed do not ask me why for now   
                         led_output2[3 * i+1] = 0xFFFF;
                         buffers[0]=led_output;
                         buffers[1]=led_output2;
@@ -403,7 +403,7 @@ void setBrightness(int brightness)
    
     uint16_t ledToDisplay = 0;
     Lines secondPixel[_nb_components];
-     uint16_t *buff = ledoutput+2;
+     uint16_t *buff = ledoutput+2; //+1 pour le premier empty +1 pour le 1 systématique
       uint16_t jump = num_leds_per_strip *_nb_components;
     for (int j = 0; j < num_leds_per_strip; j++)
     {
