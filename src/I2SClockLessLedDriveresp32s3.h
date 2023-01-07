@@ -266,11 +266,18 @@ void _initled( uint8_t * leds, int * pins, int numstrip,int NUM_LED_PER_STRIP)
                  
                     bus_config.clk_src = LCD_CLK_SRC_PLL160M;
                     bus_config.dc_gpio_num = 0;
-                    bus_config.wr_gpio_num = 5;
+                    bus_config.wr_gpio_num = 0;
                     //bus_config.data_gpio_nums = (int*)malloc(16*sizeof(int));
 for (int i=0;i<numstrip;i++)
 {
     bus_config.data_gpio_nums[i]=pins[i];
+}
+if(numstrip<16)
+{
+for (int i=numstrip;i<16;i++)
+{
+    bus_config.data_gpio_nums[i]=0;
+}
 }
                     bus_config.bus_width = 16;
                     bus_config.max_transfer_bytes = _nb_components*NUM_LED_PER_STRIP*8*3*2+__OFFSET;
