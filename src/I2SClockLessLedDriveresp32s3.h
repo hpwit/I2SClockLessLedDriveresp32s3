@@ -306,6 +306,11 @@ for (int i=numstrip;i<16;i++)
 io_config.on_color_trans_done = flush_ready;
                  ESP_ERROR_CHECK(esp_lcd_new_panel_io_i80(i80_bus, &io_config, &led_io_handle));
 
+    // reclaim GPIO0 back from the LCD peripheral. esp_lcd_new_i80_bus requires
+    // wr and dc to be valid gpio and we used 0, however we don't need those
+    // signals for our LED stuff so we can reclaim it here.
+    esp_rom_gpio_connect_out_signal(0, SIG_GPIO_OUT_IDX, false, true);
+
     }
  #ifdef __cplusplus
 }
