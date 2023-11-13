@@ -344,11 +344,11 @@ void setBrightness(int brightness)
         {
             tmp = powf((float)i / 255, 1 / _gammag);
             __green_map[i] = (uint8_t)(tmp * brightness);
-            tmp = powf((float)i / 255, 1 / _gammag);
+            tmp = powf((float)i / 255, 1 / _gammab);
             __blue_map[i] = (uint8_t)(tmp * brightness);
-            tmp = powf((float)i / 255, 1 / _gammag);
+            tmp = powf((float)i / 255, 1 / _gammar);
             __red_map[i] = (uint8_t)(tmp * brightness);
-            tmp = powf((float)i / 255, 1 / _gammag);
+            tmp = powf((float)i / 255, 1 / _gammaw);
             __white_map[i] = (uint8_t)(tmp * brightness);
         }
     }
