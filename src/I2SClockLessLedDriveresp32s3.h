@@ -53,7 +53,9 @@
 #define FF2 (0x0F0F0F0FL)
 
 #define MIN(a, b) (((a) < (b)) ? (a) : (b))
-#define __OFFSET  (24*3*2*2*2)
+#define __OFFSET 0 //  (24*3*2*2*2+2)
+
+#define __OFFSET_END  (24*3*2*2*2+2)
 #ifndef HARDWARESPRITES
 #define HARDWARESPRITES 0
 #endif
@@ -68,37 +70,37 @@
 #define _p_b 2
 #define _nb_components 4
 #else
-#ifdef COLOR_ORDER_RGBW
+#ifdef COLOR_ORDER_RGB
 #define _p_r 0
 #define _p_g 1
 #define _p_b 2
 #define _nb_components 3
 #else
-#ifdef  COLOR_ORDER_RGBW
+#ifdef  COLOR_ORDER_RBG
 #define _p_r 0
 #define _p_g 2
 #define _p_b 1
 #define _nb_components 3
 #else
-#ifdef COLOR_ORDER_RGBW
+#ifdef COLOR_ORDER_GBR
 #define _p_r 2
 #define _p_g 0
 #define _p_b 1
 #define _nb_components 3
 #else
-#ifdef COLOR_ORDER_RGBW
+#ifdef COLOR_ORDER_BGR
 #define _p_r 2
 #define _p_g 1
 #define _p_b 0
 #define _nb_components 3
 #else
-#ifdef COLOR_ORDER_RGBW
+#ifdef COLOR_ORDER_BRG
 #define _p_r 1
 #define _p_g 2
 #define _p_b 0
 #define _nb_components 3
 #else
-#ifdef COLOR_ORDER_RGBW
+#ifdef COLOR_ORDER_GRB
 #define _p_r 1
 #define _p_g 0
 #define _p_b 2
@@ -120,7 +122,7 @@
 #ifdef USE_PIXELSLIB
 //#include "pixelslib.h"
 #else
-//#include "___pixeltypes.h"
+#include "___pixeltypes.h"
 #endif
 
 
@@ -128,6 +130,7 @@
 #define CLOCKLESS_PIXEL_CLOCK_HZ  (24 * 100 * 1000)
 
 
+static bool IRAM_ATTR flush_ready(esp_lcd_panel_io_handle_t panel_io, esp_lcd_panel_io_event_data_t *edata, void *user_ctx);
 
 typedef union
 {
@@ -167,20 +170,7 @@ struct led_driver_t {
 volatile xSemaphoreHandle I2SClocklessLedDriverS3_sem = NULL;
  volatile bool isDisplaying=false;
  volatile bool iswaiting =false;
-static bool IRAM_ATTR flush_ready(esp_lcd_panel_io_handle_t panel_io, esp_lcd_panel_io_event_data_t *edata, void *user_ctx) {
-   // printf("we're here");
-  DRIVER_READY = true;
-  isDisplaying=false;
-  if(iswaiting)
-  {
-  portBASE_TYPE HPTaskAwoken = 0;
-  iswaiting=false;
-            xSemaphoreGiveFromISR(I2SClocklessLedDriverS3_sem, &HPTaskAwoken);
-            if (HPTaskAwoken == pdTRUE)
-                portYIELD_FROM_ISR(HPTaskAwoken);
-  }
-                return false;
-}
+
 static void IRAM_ATTR transpose16x1_noinline2(unsigned char *A, uint16_t *B)
 {
 
@@ -247,7 +237,7 @@ static void IRAM_ATTR transpose16x1_noinline2(unsigned char *A, uint16_t *B)
     *((uint16_t *)(B + 21)) = (uint16_t)((y & 0xff) | ((y1 & 0xff) << 8));
 }
     esp_lcd_panel_io_handle_t led_io_handle = NULL;
-
+/*
        #ifdef __cplusplus
 extern "C"
 {
@@ -302,6 +292,7 @@ for (int i=numstrip;i<16;i++)
                 // .user_ctx = nullptr,
                 io_config.lcd_cmd_bits = 0;
                 io_config.lcd_param_bits = 0;
+                io_config.user_ctx=this;
                 
 io_config.on_color_trans_done = flush_ready;
                  ESP_ERROR_CHECK(esp_lcd_new_panel_io_i80(i80_bus, &io_config, &led_io_handle));
@@ -310,10 +301,12 @@ io_config.on_color_trans_done = flush_ready;
  #ifdef __cplusplus
 }
 #endif
+*/
 class I2SClocklessLedDriveresp32S3
 {
 
     public:
+    int testcount;
     uint16_t *buffers[2];
     uint16_t * led_output = NULL;
     uint16_t * led_output2 = NULL;
@@ -365,6 +358,63 @@ void setBrightness(int brightness)
         setBrightness(_brightness);
     }
 
+void _initled( uint8_t * leds, int * pins, int numstrip,int NUM_LED_PER_STRIP)
+    {
+ 
+                //esp_lcd_panel_io_handle_t init_lcd_driver(unsigned int CLOCKLESS_PIXEL_CLOCK_HZ, size_t _nb_components) {
+
+
+
+
+                esp_lcd_i80_bus_handle_t i80_bus = NULL;
+
+                esp_lcd_i80_bus_config_t bus_config;
+                 
+                    bus_config.clk_src = LCD_CLK_SRC_PLL160M;
+                    bus_config.dc_gpio_num = 0;
+                    bus_config.wr_gpio_num = 0;
+                    //bus_config.data_gpio_nums = (int*)malloc(16*sizeof(int));
+for (int i=0;i<numstrip;i++)
+{
+    bus_config.data_gpio_nums[i]=pins[i];
+}
+if(numstrip<16)
+{
+for (int i=numstrip;i<16;i++)
+{
+    bus_config.data_gpio_nums[i]=0;
+}
+}
+                    bus_config.bus_width = 16;
+                    bus_config.max_transfer_bytes = _nb_components*NUM_LED_PER_STRIP*8*3*2+__OFFSET;
+                    bus_config.psram_trans_align = LCD_DRIVER_PSRAM_DATA_ALIGNMENT;
+                    bus_config.sram_trans_align = 4;
+                
+
+                ESP_ERROR_CHECK(esp_lcd_new_i80_bus(&bus_config, &i80_bus));
+
+                esp_lcd_panel_io_i80_config_t io_config ;
+                
+                io_config.cs_gpio_num = -1;
+                io_config.pclk_hz = CLOCKLESS_PIXEL_CLOCK_HZ;
+                io_config.trans_queue_depth = 1;
+                io_config.dc_levels = {
+                .dc_idle_level = 0,
+                .dc_cmd_level = 0,
+                .dc_dummy_level = 0,
+                .dc_data_level = 1,
+                };
+                //.on_color_trans_done = flush_ready,
+                // .user_ctx = nullptr,
+                io_config.lcd_cmd_bits = 0;
+                io_config.lcd_param_bits = 0;
+                io_config.user_ctx=this;
+                
+io_config.on_color_trans_done = flush_ready;
+                 ESP_ERROR_CHECK(esp_lcd_new_panel_io_i80(i80_bus, &io_config, &led_io_handle));
+
+    }
+
    void initled( uint8_t * leds, int * pins, int numstrip,int NUM_LED_PER_STRIP)
     {
         currentframe=0;
@@ -378,18 +428,25 @@ void setBrightness(int brightness)
             I2SClocklessLedDriverS3_sem = xSemaphoreCreateBinary();
         }
                 //esp_lcd_panel_io_handle_t init_lcd_driver(unsigned int CLOCKLESS_PIXEL_CLOCK_HZ, size_t _nb_components) {
-                led_output= (uint16_t*)heap_caps_aligned_alloc(LCD_DRIVER_PSRAM_DATA_ALIGNMENT, 8 * _nb_components * NUM_LED_PER_STRIP * 3 * 2 + __OFFSET, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
-                 memset(led_output,0,8*_nb_components * NUM_LED_PER_STRIP * 3 * 2 + __OFFSET);
-                 //led_output+=__OFFSET/2;
-                 led_output2= (uint16_t*)heap_caps_aligned_alloc(LCD_DRIVER_PSRAM_DATA_ALIGNMENT, 8 * _nb_components * NUM_LED_PER_STRIP * 3 * 2 + __OFFSET, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
-                 memset(led_output2,0,8*_nb_components * NUM_LED_PER_STRIP * 3 * 2 + __OFFSET);
-                 //led_output2+=__OFFSET/2;
+                led_output= (uint16_t*)heap_caps_aligned_alloc(LCD_DRIVER_PSRAM_DATA_ALIGNMENT, 8 * _nb_components * NUM_LED_PER_STRIP * 3 * 2 + __OFFSET+__OFFSET_END, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
+                 memset(led_output,0,8*_nb_components * NUM_LED_PER_STRIP * 3 * 2 + __OFFSET+__OFFSET_END);
+  
+                 
+                 led_output2= (uint16_t*)heap_caps_aligned_alloc(LCD_DRIVER_PSRAM_DATA_ALIGNMENT, 8 * _nb_components * NUM_LED_PER_STRIP * 3 * 2 + __OFFSET+__OFFSET_END, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
+                 memset(led_output2,0,8*_nb_components * NUM_LED_PER_STRIP * 3 * 2 + __OFFSET+__OFFSET_END);
+                         buffers[0]=led_output;
+                        buffers[1]=led_output2;
+                       // led_output[0] = 0xFFFF; //the +1 because it's like the first value doesnt get pushed do not ask me why for now   
+                        //led_output2[0] = 0xFFFF;
+                 led_output2+=__OFFSET/2;
+                 led_output+=__OFFSET/2;
+
+
                 for (int i = 0; i < NUM_LED_PER_STRIP * _nb_components * 8 ; i++)
                     {
                         led_output[3 * i+1] = 0xFFFF; //the +1 because it's like the first value doesnt get pushed do not ask me why for now   
                         led_output2[3 * i+1] = 0xFFFF;
-                        buffers[0]=led_output;
-                        buffers[1]=led_output2;
+
                     }
                 ledsbuff = leds;
                 _numstrips=numstrip;
@@ -436,16 +493,19 @@ void setBrightness(int brightness)
 
 void show()
 {
-    transposeAll(buffers[currentframe]);
+   transposeAll(buffers[currentframe]);
     if(isDisplaying)
     {
+        //Serial.println("on display dejà");
         iswaiting=true;
          if (I2SClocklessLedDriverS3_sem==NULL)
             I2SClocklessLedDriverS3_sem=xSemaphoreCreateBinary();
            xSemaphoreTake(I2SClocklessLedDriverS3_sem, portMAX_DELAY);
 }
 isDisplaying=true;
-    led_io_handle->tx_color(led_io_handle, 0x2C, buffers[currentframe], _nb_components*num_leds_per_strip*8*3*2+__OFFSET);
+ 
+    led_io_handle->tx_color(led_io_handle, 0x2C, buffers[currentframe], _nb_components*num_leds_per_strip*8*3*2+__OFFSET+__OFFSET_END);
+    
     currentframe=(currentframe+1)%2;
     }
     
@@ -453,4 +513,19 @@ isDisplaying=true;
 
     };
 
- 
+ static bool IRAM_ATTR flush_ready(esp_lcd_panel_io_handle_t panel_io, esp_lcd_panel_io_event_data_t *edata, void *user_ctx) {
+   // printf("we're here");
+  DRIVER_READY = true;
+  isDisplaying=false;
+  I2SClocklessLedDriveresp32S3 *cont = (I2SClocklessLedDriveresp32S3 *)user_ctx;
+  cont->testcount++;
+  if(iswaiting)
+  {
+  portBASE_TYPE HPTaskAwoken = 0;
+  iswaiting=false;
+            xSemaphoreGiveFromISR(I2SClocklessLedDriverS3_sem, &HPTaskAwoken);
+            if (HPTaskAwoken == pdTRUE)
+                portYIELD_FROM_ISR(HPTaskAwoken);
+  }
+                return false;
+}
