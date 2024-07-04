@@ -1,3 +1,6 @@
+#ifndef __I2S_CLOCKLESSS3_DRIVER_H
+#define __I2S_CLOCKLESSS3_DRIVER_H
+
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
@@ -538,3 +541,6 @@ isDisplaying=true;
   }
                 return false;
 }
+
+
+#endif
