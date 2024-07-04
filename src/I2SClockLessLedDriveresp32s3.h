@@ -491,6 +491,12 @@ io_config.on_color_trans_done = flush_ready;
     }
 }
 
+// Alias for show as used in the non-s3 driver
+void showPixels()
+{
+    show();
+}
+
 void show()
 {
    transposeAll(buffers[currentframe]);
